@@ -56,17 +56,6 @@ app.post("/npc", async (req, res) => {
     const npcMin = req.body.npcMin ?? null;
     const playerOffer = req.body.playerOffer ?? null;
 
-    let context = "";
-    if (car || npcAsk || npcMin || playerOffer) {
-      context =
-`КОНТЕКСТ СДЕЛКИ:
-Машина: ${car ? JSON.stringify(car) : "нет данных"}
-Цена продавца (NPC): ${npcAsk ?? "нет"}
-Минимум NPC: ${npcMin ?? "нет"}
-Предложение игрока: ${playerOffer ?? "нет"}
-
-    }
-
     const r = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -112,3 +101,13 @@ app.get("/db-test", async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+
+let context = "";
+if (car || npcAsk || npcMin || playerOffer) {
+  context = `КОНТЕКСТ СДЕЛКИ:
+Машина: ${car ? JSON.stringify(car) : "нет данных"}
+Цена продавца (NPC): ${npcAsk ?? "нет"}
+Минимум NPC: ${npcMin ?? "нет"}
+Предложение игрока: ${playerOffer ?? "нет"}
+`;
+}
