@@ -1,4 +1,11 @@
-﻿const express = require("express");
+﻿const { Pool } = require("pg");
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+const express = require("express");
 const cors = require("cors");
 
 const app = express();
@@ -57,7 +64,7 @@ app.post("/npc", async (req, res) => {
 Цена продавца (NPC): ${npcAsk ?? "нет"}
 Минимум NPC: ${npcMin ?? "нет"}
 Предложение игрока: ${playerOffer ?? "нет"}
-`;
+
     }
 
     const r = await fetch("https://api.openai.com/v1/responses", {
@@ -96,3 +103,12 @@ app.post("/npc", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Proxy running on port", PORT));
+
+app.get("/db-test", async (req, res) => {
+  try {
+    const r = await pool.query("SELECT NOW()");
+    res.json({ ok: true, time: r.rows[0] });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
