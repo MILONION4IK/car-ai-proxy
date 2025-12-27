@@ -38,12 +38,7 @@ const SYSTEM_PROMPT = `
 Формат ответа: обычный текст, без списков и без объяснений правил.
 `.trim();
 
-function extractOutputText(data) {
-  // Responses API возвращает output массивом
-  const msg = data?.output?.find((o) => o.type === "message");
-  const t = msg?.content?.find((c) => c.type === "output_text");
-  return t?.text || "";
-}
+// Функция extractOutputText больше не нужна, используем стандартный формат OpenAI API
 
 // ===== ROUTES =====
 app.get("/health", (req, res) => {
@@ -86,16 +81,16 @@ app.post("/npc", async (req, res) => {
     }
 
     const payload = {
-      model: "gpt-4.1-mini",
-      input: [
+      model: "gpt-4o-mini",
+      messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: `${context}\nСообщение игрока: ${prompt}` },
       ],
       temperature: 0.9,
-      max_output_tokens: 220,
+      max_tokens: 220,
     };
 
-    const r = await fetch("https://api.openai.com/v1/responses", {
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -106,15 +101,14 @@ app.post("/npc", async (req, res) => {
 
     const data = await r.json().catch(() => ({}));
 
-if (!r.ok) {
-  return res.status(r.status).json({
-    error: data?.error?.message || "OpenAI error",
-    raw: data,
-  });
-}
+    if (!r.ok) {
+      return res.status(r.status).json({
+        error: data?.error?.message || "OpenAI error",
+        raw: data,
+      });
+    }
 
-
-    const text = extractOutputText(data) || "(пустой ответ)";
+    const text = data?.choices?.[0]?.message?.content || "(пустой ответ)";
     res.json({ text });
   } catch (e) {
     res.status(500).json({ error: String(e) });
