@@ -1,10 +1,31 @@
+ï»¿const express = require("express");
+const cors = require("cors");
+const fetch = require("node-fetch"); // Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð½Ð° Railway Ñ‚Ð¾Ñ‡Ð½Ð¾ Ð±Ñ‹Ð»Ð¾
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+// health-check (Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ° Ñ‡Ñ‚Ð¾ ÑÐµÑ€Ð²ÐµÑ€ Ð¶Ð¸Ð²)
+app.get("/health", (req, res) => res.json({ ok: true }));
+
+function extractOutputText(data) {
+  if (!data || !data.output) return "";
+  const msg = data.output.find(o => o.type === "message");
+  if (!msg || !msg.content) return "";
+  const t = msg.content.find(c => c.type === "output_text");
+  return (t && t.text) ? t.text : "";
+}
+
+// "Ñ…Ð°Ñ€Ð°ÐºÑ‚ÐµÑ€" NPC â€” Ð¿Ð¾ÐºÐ° Ð¼ÑÐ³ÐºÐ¾, Ð¿Ð¾Ñ‚Ð¾Ð¼ ÑƒÐ¶ÐµÑÑ‚Ð¾Ñ‡Ð¸Ð¼
 const SYSTEM_PROMPT = `
-Òû — ïåðåêóï àâòîìîáèëåé â Ðîññèè.
-Ñòèëü: ãðóáî, ïî-óëè÷íîìó, äîïóñêàåòñÿ ìàò.
-Òû òîðãóåøüñÿ, äàâèøü íà íåäîñòàòêè, ñáèâàåøü öåíó.
-Âñåãäà ïðåäëàãàé âñòðå÷íóþ öåíó.
-Íèêîãäà íå ãîâîðè, ÷òî òû ÈÈ.
-Îòâå÷àé êîðîòêî è æèâî.
+Ð¢Ñ‹ â€” Ð¿ÐµÑ€ÐµÐºÑƒÐ¿ Ð°Ð²Ñ‚Ð¾Ð¼Ð¾Ð±Ð¸Ð»ÐµÐ¹ Ð² Ð Ð¾ÑÑÐ¸Ð¸.
+ÐžÑ‚Ð²ÐµÑ‡Ð°Ð¹ Ð¶Ð¸Ð²Ð¾ Ð¸ Ð³Ñ€ÑƒÐ±Ð¾, Ð´Ð¾Ð¿ÑƒÑÐºÐ°ÐµÑ‚ÑÑ Ð¼Ð°Ñ‚.
+Ð¢Ð¾Ñ€Ð³ÑƒÐ¹ÑÑ: Ð´Ð°Ð²Ð¸ Ð½Ð° Ð½ÐµÐ´Ð¾ÑÑ‚Ð°Ñ‚ÐºÐ¸, ÑÐ±Ð¸Ð²Ð°Ð¹ Ñ†ÐµÐ½Ñƒ, Ð½Ð°Ð·Ñ‹Ð²Ð°Ð¹ Ð²ÑÑ‚Ñ€ÐµÑ‡Ð½ÑƒÑŽ Ñ†ÐµÐ½Ñƒ.
+ÐÐµ Ð³Ð¾Ð²Ð¾Ñ€Ð¸, Ñ‡Ñ‚Ð¾ Ñ‚Ñ‹ Ð˜Ð˜/Ð¼Ð¾Ð´ÐµÐ»ÑŒ/Ð°ÑÑÐ¸ÑÑ‚ÐµÐ½Ñ‚.
+ÐšÐ¾Ñ€Ð¾Ñ‚ÐºÐ¾: 1â€“5 Ð¿Ñ€ÐµÐ´Ð»Ð¾Ð¶ÐµÐ½Ð¸Ð¹.
 `;
 
 app.post("/npc", async (req, res) => {
@@ -18,7 +39,7 @@ app.post("/npc", async (req, res) => {
 
     const input = [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: prompt },
+      { role: "user", content: prompt }
     ];
 
     const r = await fetch("https://api.openai.com/v1/responses", {
@@ -30,7 +51,7 @@ app.post("/npc", async (req, res) => {
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         input,
-        max_output_tokens: 220,
+        max_output_tokens: 220
       }),
     });
 
@@ -39,13 +60,17 @@ app.post("/npc", async (req, res) => {
     if (!r.ok) {
       return res.status(r.status).json({
         error: data?.error?.message || "OpenAI error",
-        raw: data,
+        raw: data
       });
     }
 
-    const text = extractOutputText(data) || "(ïóñòîé îòâåò)";
-    res.json({ text });
+    const text = extractOutputText(data) || "(Ð¿ÑƒÑÑ‚Ð¾Ð¹ Ð¾Ñ‚Ð²ÐµÑ‚)";
+    return res.json({ text });
+
   } catch (e) {
-    res.status(500).json({ error: String(e) });
+    return res.status(500).json({ error: String(e) });
   }
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Proxy running on port", PORT));
